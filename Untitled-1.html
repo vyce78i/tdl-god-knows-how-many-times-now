@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>green productivity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="tdl.css">
+</head>
+<body> <!--welcoming page-->
+    <div id="welcome-screen" class="welcome-screen">
+        <div class="welcome-card">
+            <span class="welcome-icon">🌱</span>
+            <h1 class="welcome-title">hey, are u ready for the day?</h1>
+            <p class="welcome-sub">organize your tasks and make today count.</p>
+            <button id="start-app-btn" class="start-app-btn">let's accomplish tasks</button>
+        </div>
+    </div> <!--shows when window is minimized or closed-->
+    <div id="restore-dock" class="restore-dock" style="display: none;">
+        <button id="reopen-window-btn" class="dock-btn">🌿 Restore Green Productivity</button>
+    </div> <!--main app thingy-->
+    <div id="window-frame" class="window-frame" style="display: none;">
+        <div class="window-header">
+            <div class="window-title">
+                <div class="window-title-left">
+                    <span class="window-title-icon">🌿</span>
+                    <span class="window-title-text">Green Productivity</span>
+                </div>
+                <div class="window-title-right">
+                    <span class="window-title-button" id="btn-minimize">_</span>
+                    <span class="window-title-button" id="btn-maximize">□</span>
+                    <span class="window-title-button" id="btn-close">X</span>
+                </div> 
+            </div> 
+        </div>
+
+        <div class="window-content" id="window-content"> <!--the body for the app-->
+            <div class="top-row"><!--date and progress (on the left side)-->
+                <div class="date-card">
+                    <div class="day-name" id="dayname">wednesday</div>
+                    <div class="day-circle">
+                        <span class="day-circle-text" id="day-circle-text">9</span>
+                    </div>
+                    <div class="month-name" id="monthname">september</div>
+                </div>
+
+                <div class="top-right"><!--already done & adding tasks (on the right side)-->
+                    <div class="progress-card">
+                        <div class="progress-header">
+                            <span class="progress-text">Progress</span>
+                            <span id="tasks-completed" class="tasks-completed">0/0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="task-input">
+                        <input type="text" id="task-input-field" placeholder="Add a task..." autocomplete="off">
+                        <button id="add-task-btn" class="plus-btn">+</button>
+                    </div> 
+                </div>
+            </div>
+
+            <div class="notes-section">
+                <ul id="task-list"><!--will be injected dynamically by JavaScript--></ul>
+            </div>
+
+            <div class="bottom-row">
+                <button id="finish-day-btn" class="finish-day-btn">finished the day</button>
+            </div> 
+        </div> 
+    </div>
+
+    <script> 
+        //welcome screen and app window elements
+        const welcomescreen = document.getElementById('welcome-screen');
+        const startAppBtn = document.getElementById('start-app-btn');
+        const windowFrame = document.getElementById('window-frame');
+        const restoreDock = document.getElementById('restore-dock');
+        const reopenWindowBtn = document.getElementById('reopen-window-btn');
+        const windowContent = document.getElementById('window-content');
+
+        //Control Buttons
+        const btnminimize = document.getElementById('btn-minimize');
+        const btnmaximize = document.getElementById('btn-maximize');
+        const btnclose = document.getElementById('btn-close');
+
+        //tasks and progress section
+        const taskInputField = document.getElementById('task-input-field');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const tasklist = document.getElementById('task-list');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const finishDayBtn = document.getElementById('finish-day-btn');
+        const tasksCompleted = document.getElementById('tasks-completed');
+
+        //date info
+        const dayNameElement = document.getElementById('dayname');
+        const dayCircleTextElement = document.getElementById('day-circle-text');
+        const monthNameElement = document.getElementById('monthname');
+
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        startAppBtn.addEventListener("click", () => { //welcome screen to app window
+            welcomescreen.style.display = "none";
+            windowFrame.style.display = "block";
+        });
+
+        btnminimize.addEventListener("click", () => {
+            if (windowContent.style.display === "none") {
+                windowContent.style.display = "flex";
+            } else {
+                windowContent.style.display = "none";
+            }
+        });
+
+        btnmaximize.addEventListener("click", () => {
+            windowFrame.classList.toggle("maximized");
+        });
+
+        btnclose.addEventListener("click", () => {
+            windowFrame.style.display = "none";
+            restoreDock.style.display = "block";
+        });
+
+        reopenWindowBtn.addEventListener("click", () => {
+            windowFrame.style.display = "block";
+            restoreDock.style.display = "none";
+            windowContent.style.display = "flex";
+        });
+
+        function updateDate() { //for setting the date automatically
+            const now = new Date();
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+            dayNameElement.textContent = dayNames[now.getDay()];
+            dayCircleTextElement.textContent = now.getDate();
+            monthNameElement.textContent = monthNames[now.getMonth()];
+        }
+
+        function renderTasks() { //for rendering the tasks dynamically
+            tasklist.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.innerHTML = `
+                    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} data-index="${index}">
+                    <span class="task-text ${task.completed ? 'completed' : ''}">${escapeHtml(task.text)}</span>
+                    <button class="delete-task-btn" data-index="${index}">🗑️</button>
+                `;
+                tasklist.appendChild(li); 
+            }); 
+            updateProgress();
+        }
+
+        function updateProgress() { //for updating the progress section 
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.completed).length;
+            const progressPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+            if (progressBarFill) progressBarFill.style.width = `${progressPercentage}%`;
+            if (tasksCompleted) tasksCompleted.textContent = `${completedTasks}/${totalTasks}`;
+        } 
+
+        function toggleTaskCompletion(index) { //for toggling the completion of a task
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks();
+            renderTasks();
+            updateProgress();
+        } 
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            saveTasks();
+            renderTasks();
+            updateProgress();
+        }
+
+        function saveTasks() { //for saving tasks to local storage
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function addTask() { //for adding a task
+            const taskText = taskInputField.value.trim();
+            if (taskText) {
+                tasks.push({ text: taskText, completed: false });
+                saveTasks();
+                taskInputField.value = '';
+                renderTasks();
+                updateProgress();
+            }
+        }
+
+        function escapeHtml(text) { //for escaping html injection(characters)
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        addTaskBtn.addEventListener("click", addTask);
+
+        taskInputField.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                addTask();
+            }
+        });
+
+        // Event delegation for checkbox toggles and delete buttons
+        tasklist.addEventListener("click", (e) => {
+            const index = e.target.dataset.index;
+            if (index === undefined) return;
+
+            if (e.target.classList.contains("task-checkbox")) {
+                toggleTaskCompletion(index);
+            } else if (e.target.classList.contains("delete-task-btn")) {
+                deleteTask(index);
+            }
+        });
+
+        // Finished day: preserves unfinished tasks
+        finishDayBtn.addEventListener("click", () => {
+            const completedtasks = tasks.filter(task => task.completed).length;
+            const remainingtasks = tasks.filter(task => !task.completed).length;
+
+            if (completedtasks === 0 && remainingtasks === 0) {
+                alert("No tasks to finish today!");
+                return;
+            }
+
+            alert(`You completed ${completedtasks} tasks today! ${remainingtasks} unfinished task(s) are saved for tomorrow.`);
+            
+            // Keeps ONLY unfinished tasks
+            tasks = tasks.filter(task => !task.completed);
+            saveTasks();
+            renderTasks();
+            updateProgress();
+        });
+
+        updateDate();
+        renderTasks();
+        updateProgress();
+    </script>
+                    
+</body>
+</html>
