@@ -8,7 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="tdl.css">
 </head>
-<body> <!--welcoming page-->
+<body>
+    <!--welcoming page-->
     <div id="welcome-screen" class="welcome-screen">
         <div class="welcome-card">
             <span class="welcome-icon">🌱</span>
@@ -16,10 +17,14 @@
             <p class="welcome-sub">organize your tasks and make today count.</p>
             <button id="start-app-btn" class="start-app-btn">let's accomplish tasks</button>
         </div>
-    </div> <!--shows when window is minimized or closed-->
+    </div>
+
+    <!--shows when window is minimized or closed-->
     <div id="restore-dock" class="restore-dock" style="display: none;">
         <button id="reopen-window-btn" class="dock-btn">🌿 Restore Green Productivity</button>
-    </div> <!--main app thingy-->
+    </div> 
+
+    <!--main app thingy-->
     <div id="window-frame" class="window-frame" style="display: none;">
         <div class="window-header">
             <div class="window-title">
@@ -27,20 +32,15 @@
                     <span class="window-title-icon">🌿</span>
                     <span class="window-title-text">Green Productivity</span>
                 </div>
-                <div class="window-title-right">
-                    <span class="window-title-button" id="btn-minimize">_</span>
-                    <span class="window-title-button" id="btn-maximize">□</span>
-                    <span class="window-title-button" id="btn-close">X</span>
-                </div> 
             </div> 
         </div>
 
         <div class="window-content" id="window-content"> <!--the body for the app-->
             <div class="top-row"><!--date and progress (on the left side)-->
                 <div class="date-card">
-                    <div class="day-name" id="dayname">wednesday</div>
+                    <div class="day-name" id="dayname">sunday</div>
                     <div class="day-circle">
-                        <span class="day-circle-text" id="day-circle-text">9</span>
+                        <span class="day-circle-text" id="day-circle-text">13</span>
                     </div>
                     <div class="month-name" id="monthname">september</div>
                 </div>
@@ -72,6 +72,55 @@
         </div> 
     </div>
 
+    <!--page 3: notes & transfer remaining tasks-->
+    <div id="review-screen" class="window-frame" style="display: none;">
+        <div class="window-header">
+            <div class="window-title">
+                <div class="window-title-left">
+                    <span class="window-title-icon">📝</span>
+                    <span class="window-title-text">Daily Notes & Review</span>
+                </div>
+            </div>
+        </div>
+        <div class="window-content review-layout">
+            <div class="notes-section">
+                <p class="section-label">Notes on finished tasks:</p>
+                <select id="completed-task-select" class="retro-select"></select>
+                <textarea id="daily-notes-field" class="retro-textarea" placeholder="Write any notes about today's accomplishments..."></textarea>
+            </div>
+
+            <div class="notes-section center-box">
+                <p id="transfer-prompt-text" class="section-label">do u want too add these tasks for a new day?</p>
+                <!-- Selectable transfer tasks list -->
+                <div id="remaining-tasks-preview" class="transfer-list-container"></div>
+                <div class="button-group">
+                    <button id="transfer-yes-btn" class="finish-day-btn">Yes</button>
+                    <button id="transfer-no-btn" class="finish-day-btn">No</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--delayed to next day modal popup-->
+    <div id="delayed-modal" class="modal-overlay" style="display: none;">
+        <div class="delayed-box">
+            <span class="modal-icon">🌱</span>
+            <h2 class="delayed-title">delayed to next day</h2>
+            <div id="delayed-tasks-summary" class="delayed-summary-list"></div>
+            <button id="delayed-ok-btn" class="finish-day-btn">OK</button>
+        </div>
+    </div>
+
+    <!--page 4: sleep well gorgeous page-->
+    <div id="sleep-screen" class="sleep-screen" style="display: none;">
+        <div class="sleep-card">
+            <span class="moon-icon">🌙</span>
+            <h1 class="sleep-title">sleep well gorgeous</h1>
+            <p class="sleep-sub">your tasks are set for tomorrow.</p>
+            <button id="wake-up-btn" class="start-app-btn">wake up & see tasks</button>
+        </div>
+    </div>
+
     <script> 
         //welcome screen and app window elements
         const welcomescreen = document.getElementById('welcome-screen');
@@ -80,11 +129,20 @@
         const restoreDock = document.getElementById('restore-dock');
         const reopenWindowBtn = document.getElementById('reopen-window-btn');
         const windowContent = document.getElementById('window-content');
+        const reviewScreen = document.getElementById('review-screen');
+        const sleepScreen = document.getElementById('sleep-screen');
+        const wakeUpBtn = document.getElementById('wake-up-btn');
 
-        //Control Buttons
-        const btnminimize = document.getElementById('btn-minimize');
-        const btnmaximize = document.getElementById('btn-maximize');
-        const btnclose = document.getElementById('btn-close');
+        const dailyNotesField = document.getElementById('daily-notes-field');
+        const completedTaskSelect = document.getElementById('completed-task-select');
+        const transferPromptText = document.getElementById('transfer-prompt-text');
+        const remainingTasksPreview = document.getElementById('remaining-tasks-preview');
+        const transferYesBtn = document.getElementById('transfer-yes-btn');
+        const transferNoBtn = document.getElementById('transfer-no-btn');
+
+        const delayedModal = document.getElementById('delayed-modal');
+        const delayedTasksSummary = document.getElementById('delayed-tasks-summary');
+        const delayedOkBtn = document.getElementById('delayed-ok-btn');
 
         //tasks and progress section
         const taskInputField = document.getElementById('task-input-field');
@@ -100,37 +158,21 @@
         const monthNameElement = document.getElementById('monthname');
 
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let dayOffset = parseInt(localStorage.getItem('dayOffset')) || 0;
 
         startAppBtn.addEventListener("click", () => { //welcome screen to app window
             welcomescreen.style.display = "none";
-            windowFrame.style.display = "block";
-        });
-
-        btnminimize.addEventListener("click", () => {
-            if (windowContent.style.display === "none") {
-                windowContent.style.display = "flex";
-            } else {
-                windowContent.style.display = "none";
-            }
-        });
-
-        btnmaximize.addEventListener("click", () => {
-            windowFrame.classList.toggle("maximized");
-        });
-
-        btnclose.addEventListener("click", () => {
-            windowFrame.style.display = "none";
-            restoreDock.style.display = "block";
+            windowFrame.style.display = "flex";
         });
 
         reopenWindowBtn.addEventListener("click", () => {
-            windowFrame.style.display = "block";
+            windowFrame.style.display = "flex";
             restoreDock.style.display = "none";
-            windowContent.style.display = "flex";
         });
 
         function updateDate() { //for setting the date automatically
             const now = new Date();
+            now.setDate(now.getDate() + dayOffset);
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
             dayNameElement.textContent = dayNames[now.getDay()];
@@ -216,21 +258,118 @@
             }
         });
 
-        // Finished day: preserves unfinished tasks
+        // Finished day: opens review & transfer page
         finishDayBtn.addEventListener("click", () => {
-            const completedtasks = tasks.filter(task => task.completed).length;
-            const remainingtasks = tasks.filter(task => !task.completed).length;
+            const completed = tasks.filter(t => t.completed);
+            const remaining = tasks.filter(t => !t.completed);
 
-            if (completedtasks === 0 && remainingtasks === 0) {
-                alert("No tasks to finish today!");
-                return;
+            // Populate Completed Task Selector for Notes
+            completedTaskSelect.innerHTML = '';
+            if (completed.length === 0) {
+                const opt = document.createElement('option');
+                opt.textContent = "No completed tasks to add notes to";
+                completedTaskSelect.appendChild(opt);
+                completedTaskSelect.disabled = true;
+                dailyNotesField.disabled = true;
+            } else {
+                completedTaskSelect.disabled = false;
+                dailyNotesField.disabled = false;
+                completed.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.text;
+                    opt.textContent = t.text;
+                    completedTaskSelect.appendChild(opt);
+                });
             }
 
-            alert(`You completed ${completedtasks} tasks today! ${remainingtasks} unfinished task(s) are saved for tomorrow.`);
-            
-            // Keeps ONLY unfinished tasks
-            tasks = tasks.filter(task => !task.completed);
+            remainingTasksPreview.innerHTML = '';
+
+            if (remaining.length === 0) {
+                transferPromptText.textContent = "All tasks completed! Ready for the new day?";
+                transferNoBtn.style.display = "none";
+                transferYesBtn.textContent = "Start Next Day";
+            } else {
+                transferPromptText.textContent = "do u want too add these tasks for a new day?";
+                transferNoBtn.style.display = "inline-block";
+                transferYesBtn.textContent = "Yes";
+                remaining.forEach((t) => {
+                    const item = document.createElement('label');
+                    item.className = 'transfer-checkbox-item';
+                    item.innerHTML = `
+                        <input type="checkbox" class="task-checkbox transfer-select" checked data-task="${escapeHtml(t.text)}">
+                        <span>${escapeHtml(t.text)}</span>
+                    `;
+                    remainingTasksPreview.appendChild(item);
+                });
+            }
+
+            windowFrame.style.display = "none";
+            reviewScreen.style.display = "flex";
+        });
+
+        // Handle Yes click: Save notes, show Delayed modal
+        transferYesBtn.addEventListener("click", () => {
+            const notes = dailyNotesField.value.trim();
+            const selectedTask = completedTaskSelect.value;
+            if (notes && !completedTaskSelect.disabled) {
+                const storedNotes = JSON.parse(localStorage.getItem('saved_task_notes')) || [];
+                storedNotes.push({ task: selectedTask, note: notes, date: new Date().toLocaleDateString() });
+                localStorage.setItem('saved_task_notes', JSON.stringify(storedNotes));
+                dailyNotesField.value = '';
+            }
+
+            // Gather only user-checked tasks to delay
+            const selectedCheckboxes = document.querySelectorAll('.transfer-select:checked');
+            const tasksToKeep = Array.from(selectedCheckboxes).map(cb => cb.dataset.task);
+
+            delayedTasksSummary.innerHTML = '';
+            if (tasksToKeep.length > 0) {
+                tasksToKeep.forEach(txt => {
+                    const line = document.createElement('div');
+                    line.textContent = `• ${txt}`;
+                    delayedTasksSummary.appendChild(line);
+                });
+            } else {
+                delayedTasksSummary.textContent = "No tasks selected to carry over.";
+            }
+
+            // Update tasks array with only selected tasks (marked incomplete for new day)
+            tasks = tasksToKeep.map(txt => ({ text: txt, completed: false }));
             saveTasks();
+
+            // Advance date to next day
+            dayOffset += 1;
+            localStorage.setItem('dayOffset', dayOffset);
+            updateDate();
+
+            // Show delayed confirmation modal
+            delayedModal.style.display = "flex";
+        });
+
+        // When OK clicked on modal -> go to Sleep Well Gorgeous page
+        delayedOkBtn.addEventListener("click", () => {
+            delayedModal.style.display = "none";
+            reviewScreen.style.display = "none";
+            sleepScreen.style.display = "flex";
+        });
+
+        // Handle No click (drops unfinished tasks, proceeds straight to Sleep page)
+        transferNoBtn.addEventListener("click", () => {
+            tasks = [];
+            saveTasks();
+
+            dayOffset += 1;
+            localStorage.setItem('dayOffset', dayOffset);
+            updateDate();
+
+            reviewScreen.style.display = "none";
+            sleepScreen.style.display = "flex";
+        });
+
+        // Wake up button on Sleep screen: returns to main app ready for the new day
+        wakeUpBtn.addEventListener("click", () => {
+            sleepScreen.style.display = "none";
+            windowFrame.style.display = "flex";
             renderTasks();
             updateProgress();
         });
@@ -239,6 +378,6 @@
         renderTasks();
         updateProgress();
     </script>
-                    
+</body>
 </body>
 </html>
